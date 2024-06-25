@@ -3,30 +3,26 @@ version: '3.9'
 
 services:
   db:
-    container_name: postgresPokegrunn
+    container_name: placcZaccDb
     image: postgres:16-alpine
     ports:
       - '5432:5432'
 
-    environment:
-      - POSTGRES_PASSWORD=password
-      - POSTGRES_USER=admin
-      - POSTGRES_DB=pokegrunn
+    env_file:
+      - .env
 
     volumes:
       - ./data/db:/var/lib/postgresql/data/
 
   backend: 
-    container_name: backendPokegrunn
+    container_name: placcZaccBackend
 
     build: 
       context: ./backend
       dockerfile: Dockerfile
 
-    environment:
-      - POSTGRES_PASSWORD=password
-      - POSTGRES_USER=admin
-      - POSTGRES_DB=pokegrunn
+    env_file:
+      - .env
 
     ports:
       - '8000:8000'
