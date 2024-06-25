@@ -1,0 +1,38 @@
+version: '3.9'
+
+
+services:
+  db:
+    container_name: postgresPokegrunn
+    image: postgres:16-alpine
+    ports:
+      - '5432:5432'
+
+    environment:
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_USER=admin
+      - POSTGRES_DB=pokegrunn
+
+    volumes:
+      - ./data/db:/var/lib/postgresql/data/
+
+  backend: 
+    container_name: backendPokegrunn
+
+    build: 
+      context: ./backend
+      dockerfile: Dockerfile
+
+    environment:
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_USER=admin
+      - POSTGRES_DB=pokegrunn
+
+    ports:
+      - '8000:8000'
+
+    volumes:
+      - ./backend:/app/backend
+
+    depends_on:
+      - db
