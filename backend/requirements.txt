@@ -2,3 +2,7 @@ django==4.2.6
 djangorestframework==3.14.0
 django-cors-headers==4.3.0
 psycopg[binary]==3.1.8
+buienradar==1.0.6
+scikit-learn
+scipy
+numpy
