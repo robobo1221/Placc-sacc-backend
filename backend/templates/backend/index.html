@@ -123,7 +123,7 @@
             for (let lat = latMin; lat <= latMax; lat += step) {
                 for (let lon = lonMin; lon <= lonMax; lon += step) {
                     // Add a small random offset to avoid overlapping points
-                    points.push({ lat: lat + Math.random() * step / 2., lon: lon + Math.random() * step / 2.});
+                    points.push({ lat: lat + (Math.random() - 0.5) * step, lon: lon + (Math.random() - 0.5) * step });
                 }
             }
 
@@ -152,9 +152,17 @@
                     })
             );
             const results = await Promise.all(fetchPromises);
-            document.getElementById('progress').innerText = null;
+            document.getElementById('progress').innerText = '100% completed.';
 
             return results.filter(data => data !== null); // Filter out null results
+        }
+
+        function initializeHeatmapLayer(heatmapData){
+            return L.idwLayer(heatmapData, {
+                opacity: 0.5,
+                exp: 3.0,
+                gradient: { 0.0: 'blue', 0.1666: 'cyan', 0.333: 'lime', 0.5: 'yellow', 0.666: 'red', 0.8333: 'purple', 1.0: 'white' }
+            });
         }
 
         async function createHeatmap() {
@@ -162,11 +170,7 @@
             const latMax = 53.500000;
             const lonMin = 3.358402;
             const lonMax = 7.227510;
-            const step = 0.4; // Adjust step size for grid density
-
-            const gridPoints = generateGrid(latMin, latMax, lonMin, lonMax, step);
-
-            const heatmapData = await fetchData(gridPoints);
+            const step = 0.5; // Adjust step size for grid density
 
             const map = L.map('map').setView([52.370216, 4.895168], 7);
 
@@ -174,12 +178,21 @@
                 attribution: '© OpenStreetMap contributors'
             }).addTo(map);
 
-            L.idwLayer(heatmapData, {
-                opacity: 0.5,
-                cellSize: 10,
-                exp: 3.0,
-                gradient: { 0.0: 'blue', 0.1666: 'cyan', 0.333: 'lime', 0.5: 'yellow', 0.666: 'red', 0.8333: 'purple', 1.0: 'white' }
-            }).addTo(map);
+            let heatmapData = [];
+            let layer = null;
+
+            //while(heatmapData.length < 1000) {
+            const newGridPoints = generateGrid(latMin, latMax, lonMin, lonMax, step);
+            const newHeatmapData = await fetchData(newGridPoints);
+
+            heatmapData = heatmapData.concat(newHeatmapData);
+            
+            if (layer) {
+                layer.remove();
+            }
+            layer = initializeHeatmapLayer(heatmapData);
+            layer.addTo(map);
+            //}
         }
 
         document.addEventListener('DOMContentLoaded', async function() {
