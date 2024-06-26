@@ -1,5 +1,6 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
+from predictor.models import CapturedWeatherData
 
 from predictor.utils import get_weather_data, predict_sticky_weather, forecast_sticky_weather
 from .util import get_boolean_query_item
@@ -71,4 +72,25 @@ class ForecastStickyWeatherView(APIView):
         if result is None:
             return Response({'error': 'Failed to forecast sticky weather.'}, status=500)
         
-        return Response(result)
+        return Response({
+            'forecast': result
+        })
+    
+class CapturedWeatherDataView(APIView):
+    def post(self, request, *args, **kwargs):
+        lat = request.data.get('lat', None)
+        lon = request.data.get('lon', None)
+        sticky = request.data.get('sticky', True)
+
+        if lat is None or lon is None:
+            return Response({'error': 'Latitude and longitude are required.'}, status=400)
+        
+        lat = float(lat)
+        lon = float(lon)
+        
+        weather_data = CapturedWeatherData.objects.create(longitude=lon, latitude=lat, sticky_sack=sticky)
+        
+        if not weather_data or not weather_data.weather_data:
+            return Response({'error': 'Failed to create weather data.'}, status=500)
+        
+        return Response({'id': weather_data.id})

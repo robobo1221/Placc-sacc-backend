@@ -1,14 +1,120 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Welcome to PlaccZacc API</title>
-</head>
-<body>
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Welcome to PlaccZacc API</title>
+    </head>
+    <body>
+        <h1>Welcome to placczacc</h1>
 
-    <h1>Hello, user!</h1>
-    <p>Welcome to the API of PlaccZacc!</p>
+        <label for="sticky">I have a sticky sack?</label>
+        <input type="checkbox" id="sticky" name="sticky" value="sticky"/>
+        <button id="stickybutton">Submit</button>
 
-</body>
+        <p>
+            The current probability of you getting sticky balls today is: <span id="probability">...</span>
+        </p>
+
+        <p>
+            <h2>Forecast</h2>
+            <ul id="forecast"></ul>
+        </p>
+    </body>
+
+    <script>
+        function add_measuring() {
+            navigator.geolocation.getCurrentPosition((position) => {
+                const lat = position.coords.latitude;
+                const lon = position.coords.longitude;
+
+                const ajax = new XMLHttpRequest();
+
+                ajax.onreadystatechange = function() {
+                    if (ajax.readyState === 4 && ajax.status === 200) {
+                        const response = JSON.parse(ajax.responseText);
+                        document.getElementById('sticky').checked = false;
+
+                        set_probability();
+                        load_forecast();
+                    }
+                }
+
+                ajax.open('POST', `{% url "api:capturedweatherdata" %}`);
+                ajax.setRequestHeader('Content-Type', 'application/json');
+                ajax.setRequestHeader('X-CSRFToken', '{{ csrf_token }}');
+                ajax.send(JSON.stringify({
+                    lat: lat,
+                    lon: lon,
+                    sticky: document.getElementById('sticky').checked
+                }));
+            });
+        }
+
+        function format_probability(probability) {
+            return `${(probability * 100).toFixed(2)}%`;
+        }
+
+        function set_probability() {
+            navigator.geolocation.getCurrentPosition((position) => {
+                const lat = position.coords.latitude;
+                const lon = position.coords.longitude;
+
+                const ajax = new XMLHttpRequest();
+
+                ajax.onreadystatechange = function() {
+                    if (ajax.readyState === 4 && ajax.status === 200) {
+                        const response = JSON.parse(ajax.responseText);
+                        document.getElementById('probability').innerText = format_probability(response.probability);
+                    }
+                }
+
+                ajax.open('GET', `{% url "api:stickyprediction" %}?lat=${lat}&lon=${lon}`);
+                ajax.setRequestHeader('Content-Type', 'application/json');
+                ajax.send();
+            });
+        }
+
+        function load_forecast() {
+            navigator.geolocation.getCurrentPosition((position) => {
+                const lat = position.coords.latitude;
+                const lon = position.coords.longitude;
+
+                const ajax = new XMLHttpRequest();
+
+                ajax.onreadystatechange = function() {
+                    if (ajax.readyState === 4 && ajax.status === 200) {
+                        const response = JSON.parse(ajax.responseText);
+                        const forecast_element = document.getElementById('forecast');
+
+                        forecast_element.innerHTML = '';
+
+                        for (const forecast of response.forecast) {
+                            const li = document.createElement('li');
+                            li.innerText = `${forecast.datetime} : ${format_probability(forecast.probability)}`;
+                            forecast_element.appendChild(li);
+                        };
+                    }
+                }
+
+                ajax.open('GET', `{% url "api:forecaststicky" %}?lat=${lat}&lon=${lon}`);
+                ajax.setRequestHeader('Content-Type', 'application/json');
+                ajax.send();
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const button = document.getElementById('stickybutton');
+            const checkbox = document.getElementById('sticky');
+
+            set_probability();
+            load_forecast();
+
+            button.addEventListener('click', function() {
+                add_measuring();
+            });
+
+            
+        });
+    </script>
 </html>

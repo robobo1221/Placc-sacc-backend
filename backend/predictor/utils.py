@@ -15,14 +15,18 @@ def get_weather_data(sticky = None):
 
     return weather_data.values()
 
-def calculate_sticky_probability(temp: float, humidity: float, wind_speed: float, precipitation: float):
-    captured_data = CapturedWeatherData.objects.all()
-    if not captured_data.exists():
-        return 0.0
+def calculate_sticky_probability(temp: float, humidity: float, wind_speed: float, precipitation: float, captured_data = None):
+    if captured_data is None:
+        captured_data = CapturedWeatherData.objects.all()
+        if not captured_data.exists():
+            return 0.0
 
     X = []
     y = []
     for data in captured_data:
+        if not data or not data.weather_data:
+            continue
+
         X.append([data.weather_data.temperature,
                   data.weather_data.humidity,
                   data.weather_data.wind_speed,
@@ -74,10 +78,6 @@ def create_weather_data(lon: float, lat: float, buienradar_data: dict = None):
 
     return None
 
-def predict_sticky_weather(lon: float, lat: float, temp: float, humidity: float, wind_speed: float, precipitation: float):
-    probability = calculate_sticky_probability(temp, humidity, wind_speed, precipitation)
-    return probability
-
 def predict_sticky_weather(lon: float, lat: float):
     data = get_buienradar_data(lat=lat, lon=lon)
 
@@ -95,7 +95,11 @@ def predict_sticky_weather(lon: float, lat: float):
 def forecast_sticky_weather(lon: float, lat: float):
     data = get_buienradar_data(lat=lat, lon=lon)
 
-    forecast_dict = {}
+    forecast_list = []
+
+    captured_data = CapturedWeatherData.objects.all()
+    if not captured_data.exists():
+        return forecast_list
 
     if data:
         for forecast in data['forecast']:
@@ -104,12 +108,12 @@ def forecast_sticky_weather(lon: float, lat: float):
             precipitation = forecast['rain'] * 0.1
             humidity = estimate_humidity(temp, forecast['sunchance'], wind_speed, forecast['rainchance'])
 
-            probability = calculate_sticky_probability(temp, humidity, wind_speed, precipitation)
-            forecast_dict[str(forecast['datetime'])] = probability
+            probability = calculate_sticky_probability(temp, humidity, wind_speed, precipitation, captured_data)
+            forecast_list.append({
+                "datetime": str(forecast['datetime']),
+                "probability": probability})
         
-        return forecast_dict
-
-    return {}
+    return forecast_list
 
 def estimate_dew_point(temp_c, rh):
     a = 17.27
