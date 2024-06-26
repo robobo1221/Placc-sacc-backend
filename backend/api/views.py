@@ -51,7 +51,7 @@ class StickyWeatherPredictionView(APIView):
         lat = float(lat)
         lon = float(lon)
         
-        result = predict_sticky_weather(lat, lon)
+        result = predict_sticky_weather(lon=lon, lat=lat)
         if result is None:
             return Response({'error': 'Failed to predict sticky weather.'}, status=500)
         
@@ -68,7 +68,7 @@ class ForecastStickyWeatherView(APIView):
         lat = float(lat)
         lon = float(lon)
         
-        result = forecast_sticky_weather(lat, lon)
+        result = forecast_sticky_weather(lon=lon, lat=lat)
         if not result:
             return Response({'error': 'Failed to forecast sticky weather.'}, status=500)
         

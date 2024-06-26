@@ -1,8 +1,16 @@
+{% load static %}
+
 <!DOCTYPE html>
 <html lang="en">
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+        <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+        <script src="{% static "js/leaflet-idw.js" %}"></script>
+        <style>
+            #map { height: 600px; width: 50%; }
+        </style>
         <title>Welcome to PlaccZacc API</title>
     </head>
     <body>
@@ -13,13 +21,18 @@
         <button id="stickybutton">Submit</button>
 
         <p>
-            The current probability of you getting sticky balls today is: <span id="probability">...</span>
+            The current probability of you getting sticky balls right now is: <span id="probability">...</span>
         </p>
 
         <p>
             <h2>Forecast for <span id="neareststation"></span></h2>
             <ul id="forecast"></ul>
         </p>
+
+        <h2>Heatmap</h2>
+        <button id="heatmapbutton">Generate Heatmap</button>
+        <div id="progress"></div>
+        <div id="map"></div>
     </body>
 
     <script>
@@ -105,7 +118,71 @@
             });
         }
 
-        document.addEventListener('DOMContentLoaded', function() {
+        function generateGrid(latMin, latMax, lonMin, lonMax, step) {
+            const points = [];
+            for (let lat = latMin; lat <= latMax; lat += step) {
+                for (let lon = lonMin; lon <= lonMax; lon += step) {
+                    // Add a small random offset to avoid overlapping points
+                    points.push({ lat: lat + Math.random() * step / 2., lon: lon + Math.random() * step / 2.});
+                }
+            }
+
+            points.push({ lat: 52.999621, lon: 6.971006 }); // Add the last point
+
+            return points;
+        }
+
+        // Function to fetch data from the API
+        async function fetchData(coordinates) {
+            let totalPoints = coordinates.length;
+            let currentPoints = 0;
+
+            const fetchPromises = coordinates.map(point =>
+                fetch(`{% url "api:stickyprediction" %}?lat=${point.lat}&lon=${point.lon}`)
+                    .then(response => response.json())
+                    .then((result) => {
+                        let percentage = (currentPoints / totalPoints) * 100;
+                        document.getElementById('progress').innerText = `${percentage.toFixed(2)}% completed.`;
+
+                        currentPoints++;
+                        return [point.lat, point.lon, result.probability ]
+                    }) // Scale intensity
+                    .catch(error => {
+                        return null; // Return null if there's an error
+                    })
+            );
+            const results = await Promise.all(fetchPromises);
+            document.getElementById('progress').innerText = null;
+
+            return results.filter(data => data !== null); // Filter out null results
+        }
+
+        async function createHeatmap() {
+            const latMin = 50.750383;
+            const latMax = 53.500000;
+            const lonMin = 3.358402;
+            const lonMax = 7.227510;
+            const step = 0.4; // Adjust step size for grid density
+
+            const gridPoints = generateGrid(latMin, latMax, lonMin, lonMax, step);
+
+            const heatmapData = await fetchData(gridPoints);
+
+            const map = L.map('map').setView([52.370216, 4.895168], 7);
+
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors'
+            }).addTo(map);
+
+            L.idwLayer(heatmapData, {
+                opacity: 0.5,
+                cellSize: 10,
+                exp: 3.0,
+                gradient: { 0.0: 'blue', 0.1666: 'cyan', 0.333: 'lime', 0.5: 'yellow', 0.666: 'red', 0.8333: 'purple', 1.0: 'white' }
+            }).addTo(map);
+        }
+
+        document.addEventListener('DOMContentLoaded', async function() {
             const button = document.getElementById('stickybutton');
             const checkbox = document.getElementById('sticky');
 
@@ -116,7 +193,9 @@
                 add_measuring();
             });
 
-            
+            document.getElementById('heatmapbutton').addEventListener('click', function() {
+                createHeatmap();
+            });
         });
     </script>
 </html>

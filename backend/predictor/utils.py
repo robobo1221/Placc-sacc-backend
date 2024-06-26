@@ -1,6 +1,12 @@
 from predictor.models import WeatherData
 from predictor.models import CapturedWeatherData
 from sklearn.linear_model import LogisticRegression
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.ensemble import GradientBoostingClassifier
+
+
+from sklearn.svm import SVC
 import numpy as np
 import math
 
@@ -38,12 +44,12 @@ def calculate_sticky_probability(temp: float, humidity: float, wind_speed: float
     y = np.array(y)
     
     # Train the logistic regression model
-    model = LogisticRegression()
+    model = LogisticRegression(random_state=0, max_iter=10000)
     model.fit(X, y)
     
     # Predict the probability of sticky weather
     input_data = np.array([[temp, humidity, wind_speed, precipitation]])
-    probability = model.predict_proba(input_data)[0][1]
+    probability = model.predict_proba(input_data)[:, 1]
     
     return probability
 
@@ -56,7 +62,7 @@ def get_buienradar_data(lat: float, lon: float):
         data = result[CONTENT]
         rain_data = result[RAINCONTENT]
 
-        parsed_data = parse_data(data, rain_data, lon, lat)
+        parsed_data = parse_data(data, rain_data, lat, lon)
         return parsed_data['data']
 
     raise Exception('Failed to get data from Buienradar')
@@ -73,6 +79,18 @@ def create_weather_data(lon: float, lat: float, buienradar_data: dict = None):
         wind_speed = data['windspeed']
         precipitation = data['precipitation']
 
+        if temp is None:
+            temp = 16.0
+
+        if wind_speed is None:
+            wind_speed = 0
+
+        if precipitation is None:
+            precipitation = 0
+
+        if humidity is None:
+            humidity = 25
+
         weather_data = WeatherData.objects.create(temperature=temp, humidity=humidity, wind_speed=wind_speed, precipitation=precipitation)
         return weather_data
 
@@ -86,6 +104,18 @@ def predict_sticky_weather(lon: float, lat: float):
         wind_speed = data['windspeed']
         precipitation = data['precipitation']
         humidity = data['humidity']
+
+        if temp is None:
+            temp = 16.0
+
+        if wind_speed is None:
+            wind_speed = 0
+
+        if precipitation is None:
+            precipitation = 0
+
+        if humidity is None:
+            humidity = 25
 
         probability = calculate_sticky_probability(temp, humidity, wind_speed, precipitation)
         return probability

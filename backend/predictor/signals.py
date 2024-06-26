@@ -8,5 +8,5 @@ from predictor.utils import create_weather_data
 @receiver(post_save, sender=CapturedWeatherData)
 def sync_weater_data(sender, instance, created, **kwargs):
     if not instance.weather_data:
-        instance.weather_data = create_weather_data(instance.longitude, instance.latitude)
+        instance.weather_data = create_weather_data(lon = instance.longitude, lat = instance.latitude)
         instance.save()
