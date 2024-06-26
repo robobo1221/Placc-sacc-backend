@@ -56,7 +56,7 @@ def get_buienradar_data(lat: float, lon: float):
         data = result[CONTENT]
         rain_data = result[RAINCONTENT]
 
-        parsed_data = parse_data(data, rain_data, lat, lon)
+        parsed_data = parse_data(data, rain_data, lon, lat)
         return parsed_data['data']
 
     raise Exception('Failed to get data from Buienradar')
@@ -103,7 +103,7 @@ def forecast_sticky_weather(lon: float, lat: float):
 
     if data:
         for forecast in data['forecast']:
-            temp = (forecast['mintemp'] + forecast['maxtemp']) / 2
+            temp = forecast['maxtemp']
             wind_speed = forecast['windspeed']
             precipitation = forecast['rain'] * 0.1
             humidity = estimate_humidity(temp, forecast['sunchance'], wind_speed, forecast['rainchance'])
@@ -112,8 +112,10 @@ def forecast_sticky_weather(lon: float, lat: float):
             forecast_list.append({
                 "datetime": str(forecast['datetime']),
                 "probability": probability})
+            
+    nearest_station = data['stationname']
         
-    return forecast_list
+    return [nearest_station, forecast_list]
 
 def estimate_dew_point(temp_c, rh):
     a = 17.27

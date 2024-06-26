@@ -17,7 +17,7 @@
         </p>
 
         <p>
-            <h2>Forecast</h2>
+            <h2>Forecast for <span id="neareststation"></span></h2>
             <ul id="forecast"></ul>
         </p>
     </body>
@@ -88,6 +88,8 @@
                         const forecast_element = document.getElementById('forecast');
 
                         forecast_element.innerHTML = '';
+
+                        document.getElementById('neareststation').innerText = response.nearest_station;
 
                         for (const forecast of response.forecast) {
                             const li = document.createElement('li');

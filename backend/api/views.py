@@ -69,11 +69,12 @@ class ForecastStickyWeatherView(APIView):
         lon = float(lon)
         
         result = forecast_sticky_weather(lat, lon)
-        if result is None:
+        if not result:
             return Response({'error': 'Failed to forecast sticky weather.'}, status=500)
         
         return Response({
-            'forecast': result
+            'nearest_station': result[0],
+            'forecast': result[1],
         })
     
 class CapturedWeatherDataView(APIView):
