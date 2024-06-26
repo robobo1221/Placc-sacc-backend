@@ -49,7 +49,7 @@ def calculate_sticky_probability(temp: float, humidity: float, wind_speed: float
     
     # Predict the probability of sticky weather
     input_data = np.array([[temp, humidity, wind_speed, precipitation]])
-    probability = model.predict_proba(input_data)[:, 1]
+    probability = model.predict_proba(input_data)[:, 1][0]
     
     return probability
 
