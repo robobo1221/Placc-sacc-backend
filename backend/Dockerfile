@@ -1,26 +1,23 @@
-FROM python:3.10-alpine
+FROM python:3.10-slim
 
-ENV PYTHONUNBUFFERED 1
-ENV PYTHONDONTWRITEBYTECODE 1
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PIP_NO_CACHE_DIR=1
 
 WORKDIR /app/backend
 
-COPY requirements.txt /app/backend/
+COPY requirements.txt .
 
-# Build psycopg2-binary from source -- add required required dependencies
-RUN apk add --virtual .build-deps --no-cache \
-        postgresql-dev \
-        gcc \
-        g++ \
-        python3-dev \
-        musl-dev \
-    && apk add --no-cache \
-        libstdc++ \
-        libgomp \
-    && pip install --no-cache-dir -r requirements.txt \
-    && apk del .build-deps
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        libpq5 \
+    && pip install --upgrade pip \
+    && pip install -r requirements.txt \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
-COPY . /app/backend/
+COPY . .
 
 EXPOSE 8000
-CMD sleep 20 ; echo "Apply database migrations" ; python manage.py migrate ; echo "Starting server" ; python manage.py runserver 0.0.0.0:8000
+
+CMD sh -c 'sleep 20; echo "Apply database migrations"; python manage.py migrate; echo "Starting server"; python manage.py runserver 0.0.0.0:8000'

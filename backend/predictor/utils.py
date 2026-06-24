@@ -21,7 +21,7 @@ def get_weather_data(sticky = None):
 
     return weather_data.values()
 
-def calculate_sticky_probability(temp: float, humidity: float, wind_speed: float, precipitation: float, captured_data = None):
+def calculate_sticky_probability(temp: float, humidity: float, wind_speed: float, precipitation: float, captured_data=None):
     if captured_data is None:
         captured_data = CapturedWeatherData.objects.all()
         if not captured_data.exists():
@@ -29,29 +29,45 @@ def calculate_sticky_probability(temp: float, humidity: float, wind_speed: float
 
     X = []
     y = []
+
     for data in captured_data:
         if not data or not data.weather_data:
             continue
 
-        X.append([data.weather_data.temperature,
-                  data.weather_data.humidity,
-                  data.weather_data.wind_speed,
-                  data.weather_data.precipitation])
-        y.append(data.sticky_sack)
-    
-    # Convert lists to numpy arrays
+        X.append([
+            data.weather_data.temperature,
+            data.weather_data.humidity,
+            data.weather_data.wind_speed,
+            data.weather_data.precipitation
+        ])
+        y.append(bool(data.sticky_sack))
+
+    if len(X) == 0:
+        return 0.0
+
     X = np.array(X)
     y = np.array(y)
-    
-    # Train the logistic regression model
+
+    # LogisticRegression needs both True and False examples
+    unique_classes = np.unique(y)
+
+    if len(unique_classes) < 2:
+        # If all known samples are sticky, return high probability.
+        # If all known samples are not sticky, return low probability.
+        return 1.0 if unique_classes[0] is True or unique_classes[0] == True else 0.0
+
     model = LogisticRegression(random_state=0, max_iter=10000)
     model.fit(X, y)
-    
-    # Predict the probability of sticky weather
+
     input_data = np.array([[temp, humidity, wind_speed, precipitation]])
-    probability = model.predict_proba(input_data)[:, 1][0]
-    
-    return probability
+
+    classes = model.classes_
+    probabilities = model.predict_proba(input_data)[0]
+
+    # Find probability for True class safely
+    true_index = np.where(classes == True)[0][0]
+
+    return probabilities[true_index]
 
 def get_buienradar_data(lat: float, lon: float):
     from buienradar.buienradar import (get_data, parse_data)
