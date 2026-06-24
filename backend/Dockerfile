@@ -20,4 +20,4 @@ COPY . .
 
 EXPOSE 8000
 
-CMD sh -c 'sleep 20; echo "Apply database migrations"; python manage.py migrate; echo "Starting server"; python manage.py runserver 0.0.0.0:8000'
+CMD sh -c 'echo "Apply database migrations"; python manage.py migrate; echo "Starting server"; python manage.py runserver 0.0.0.0:8000'

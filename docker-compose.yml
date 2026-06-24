@@ -1,6 +1,5 @@
 version: '3.9'
 
-
 services:
   db:
     container_name: placcZaccDb
@@ -14,10 +13,17 @@ services:
     volumes:
       - ./data/db:/var/lib/postgresql/data/
 
-  backend: 
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  backend:
     container_name: placcZaccBackend
 
-    build: 
+    build:
       context: ./backend
       dockerfile: Dockerfile
 
@@ -31,4 +37,5 @@ services:
       - ./backend:/app/backend
 
     depends_on:
-      - db
+      db:
+        condition: service_healthy
