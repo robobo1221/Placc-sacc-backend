@@ -30,7 +30,28 @@ def calculate_sticky_probability(temp: float, humidity: float, wind_speed: float
     X = []
     y = []
 
+    # exclude any weather data that is very close to each other in variables to avoid overfitting
+    # for instance if all the 4 variables are close to each other, we can skip that data point
+    
+    filtered_data = []
     for data in captured_data:
+        if not data or not data.weather_data:
+            continue
+
+        if len(filtered_data) == 0:
+            filtered_data.append(data)
+            continue
+
+        last_data = filtered_data[-1]
+        if (abs(data.weather_data.temperature - last_data.weather_data.temperature) < 0.5 and
+            abs(data.weather_data.humidity - last_data.weather_data.humidity) < 5 and
+            abs(data.weather_data.wind_speed - last_data.weather_data.wind_speed) < 1 and
+            abs(data.weather_data.precipitation - last_data.weather_data.precipitation) < 0.1):
+            continue
+
+        filtered_data.append(data)
+
+    for data in filtered_data:
         if not data or not data.weather_data:
             continue
 
