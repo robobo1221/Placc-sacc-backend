@@ -1,7 +1,11 @@
+import hmac
 import ipaddress
+import logging
 
 from django.conf import settings
 from django.http import HttpResponseNotFound
+
+logger = logging.getLogger(__name__)
 
 
 def _networks(values):
@@ -40,4 +44,32 @@ class AdminIPRestrictionMiddleware:
     def __call__(self, request):
         if request.path.startswith('/admin') and not self._in(self.client_ip(request), self.allowed):
             return HttpResponseNotFound()
+        return self.get_response(request)
+
+
+class APIKeyMiddleware(AdminIPRestrictionMiddleware):
+    """Require a shared secret on /api/ (header X-Api-Key) - meant for the server-side frontend (Cloudflare Worker).
+
+    - API_SHARED_SECRET empty: middleware does nothing.
+    - API_KEY_ENFORCE False: requests without a valid key are allowed but logged (rollout / verification).
+    - API_KEY_ENFORCE True: requests without a valid key get a plain 404.
+    Requests from API_KEY_EXEMPT_NETWORKS (home LAN / Tailscale) never need the key.
+    Client IP detection (TRUSTED_PROXIES / X-Forwarded-For) is shared with AdminIPRestrictionMiddleware.
+    """
+
+    def __init__(self, get_response):
+        super().__init__(get_response)
+        self.secret = (settings.API_SHARED_SECRET or '').encode()
+        self.enforce = settings.API_KEY_ENFORCE
+        self.exempt = _networks(settings.API_KEY_EXEMPT_NETWORKS)
+
+    def __call__(self, request):
+        if self.secret and request.path.startswith('/api/'):
+            ip = self.client_ip(request)
+            if not self._in(ip, self.exempt):
+                given = request.META.get('HTTP_X_API_KEY', '').encode()
+                if not hmac.compare_digest(given, self.secret):
+                    if self.enforce:
+                        return HttpResponseNotFound()
+                    logger.warning('API request without valid X-Api-Key from %s (%s) - not enforced', ip, request.path)
         return self.get_response(request)

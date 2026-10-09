@@ -26,6 +26,20 @@ ADMIN_ALLOWED_NETWORKS = env.list('ADMIN_ALLOWED_NETWORKS', default=[
 ])
 # Reverse proxies (e.g. Nginx Proxy Manager) whose X-Forwarded-For header may be trusted.
 TRUSTED_PROXIES = env.list('TRUSTED_PROXIES', default=[])
+
+# Shared secret for /api/ (header X-Api-Key), sent by the server-side frontend (Cloudflare Worker).
+# Empty = off. With API_KEY_ENFORCE=False missing/invalid keys are only logged (for rollout).
+API_SHARED_SECRET = env('API_SHARED_SECRET', default='')
+API_KEY_ENFORCE = env.bool('API_KEY_ENFORCE', default=False)
+# Networks that may call /api/ without the key (home LAN, Tailscale). Default: same private ranges as admin.
+API_KEY_EXEMPT_NETWORKS = env.list('API_KEY_EXEMPT_NETWORKS', default=ADMIN_ALLOWED_NETWORKS)
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {'console': {'class': 'logging.StreamHandler'}},
+    'loggers': {'backend.middleware': {'handlers': ['console'], 'level': 'INFO'}},
+}
 # Only the frontend may call the API from a browser. Add more (e.g. http://localhost:5173) in .env, comma separated.
 CORS_ALLOWED_ORIGINS = env.list('CORS_ALLOWED_ORIGINS', default=['https://placc-sacc-frontend.robobo1221.workers.dev'])
 
@@ -48,6 +62,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'backend.middleware.AdminIPRestrictionMiddleware',
+    'backend.middleware.APIKeyMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'corsheaders.middleware.CorsMiddleware',
