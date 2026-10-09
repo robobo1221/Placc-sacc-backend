@@ -15,11 +15,17 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.contrib import admin
-from django.urls import path, include
-from .views import IndexView
+from django.conf import settings
+from django.urls import path, include, re_path
+from django.views.static import serve
 
 urlpatterns = [
-    path('', IndexView.as_view()),
     path('admin/', admin.site.urls),
     path('api/', include("api.urls")),
+]
+
+# Achievement images and QR codes are uploaded at runtime into static/images/ (see achievements/models.py).
+# WhiteNoise only serves files that existed when the server started, so serve these uploads directly.
+urlpatterns += [
+    re_path(r'^static/images/(?P<path>.*)$', serve, {'document_root': settings.BASE_DIR / settings.IMAGES_DIR}),
 ]
