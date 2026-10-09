@@ -18,7 +18,16 @@ DEBUG = env('DEBUG')
 # SECURITY WARNING: don't run with debug turned on in production!
 ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=[])
 CSRF_TRUSTED_ORIGINS = env.list('CSRF_TRUSTED_ORIGINS', default=[])
-CORS_ALLOW_ALL_ORIGINS = True
+
+# /admin is only reachable from these networks (anyone else gets a 404).
+# Default: private ranges (home LAN, Docker, Tailscale CGNAT). Override in .env, comma separated.
+ADMIN_ALLOWED_NETWORKS = env.list('ADMIN_ALLOWED_NETWORKS', default=[
+    '127.0.0.0/8', '10.0.0.0/8', '172.16.0.0/12', '192.168.0.0/16', '100.64.0.0/10', '::1/128', 'fc00::/7',
+])
+# Reverse proxies (e.g. Nginx Proxy Manager) whose X-Forwarded-For header may be trusted.
+TRUSTED_PROXIES = env.list('TRUSTED_PROXIES', default=[])
+# Only the frontend may call the API from a browser. Add more (e.g. http://localhost:5173) in .env, comma separated.
+CORS_ALLOWED_ORIGINS = env.list('CORS_ALLOWED_ORIGINS', default=['https://placc-sacc-frontend.robobo1221.workers.dev'])
 
 
 # Application definition
@@ -38,6 +47,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'backend.middleware.AdminIPRestrictionMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'corsheaders.middleware.CorsMiddleware',
@@ -53,7 +63,7 @@ ROOT_URLCONF = 'backend.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [BASE_DIR / "templates"],
+        'DIRS': [],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -111,11 +121,12 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
 
-STATICFILES_DIRS = ('static',)
+# API-only backend: static files are only the Django admin / DRF assets (collected by collectstatic).
 STATIC_ROOT = BASE_DIR / "staticfiles"  # collectstatic target, served by WhiteNoise when DEBUG=False
-STATIC_URL = f'/{STATICFILES_DIRS[0]}/'
+STATIC_URL = '/static/'
 
-IMAGES_DIR = f'{STATICFILES_DIRS[0]}/images'
+# Runtime uploads (achievement images, QR codes) - served by a route in urls.py
+IMAGES_DIR = 'static/images'
 QRCODE_DIR = f'{IMAGES_DIR}/qrcode'
 
 # Default primary key field type

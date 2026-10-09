@@ -18,10 +18,8 @@ from django.contrib import admin
 from django.conf import settings
 from django.urls import path, include, re_path
 from django.views.static import serve
-from .views import IndexView
 
 urlpatterns = [
-    path('', IndexView.as_view()),
     path('admin/', admin.site.urls),
     path('api/', include("api.urls")),
 ]
