@@ -112,7 +112,7 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
 
 STATICFILES_DIRS = ('static',)
-STATIC_ROOT = 'BASE_DIR / "staticfiles"'
+STATIC_ROOT = BASE_DIR / "staticfiles"  # collectstatic target, served by WhiteNoise when DEBUG=False
 STATIC_URL = f'/{STATICFILES_DIRS[0]}/'
 
 IMAGES_DIR = f'{STATICFILES_DIRS[0]}/images'
