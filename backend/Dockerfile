@@ -13,6 +13,7 @@ RUN apt-get update \
         libpq5 \
     && pip install --upgrade pip setuptools \
     && pip install -r requirements.txt \
+    && pip uninstall -y pip \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
